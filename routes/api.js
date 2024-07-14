@@ -1,5 +1,8 @@
 'use strict';
 
+const Issue = require("../db_schema");
+
+
 module.exports = function (app) {
 
   app.route('/api/issues/:project')
@@ -11,19 +14,26 @@ module.exports = function (app) {
       
     })
     
-    .post(function (req, res){
-      let project = req.params.project;
-      let data = req.body;
+    .post(async function(req, res){
+      const project = req.params.project;
+      const { issue_title, issue_text, created_by, assigned_to, status_text } = req.body;
 
-      res.json({
-        issue_title: data.issue_title,
-        issue_text: data.issue_text,
-        created_by: data.created_by,
-        assigned_to: data.assigned_to,
-        status_text: data.status_text
-      })
+      const newIssue = new Issue({
+        project,
+        issue_title,
+        issue_text,
+        created_by,
+        assigned_to,
+        status_text
+      });
 
-      
+
+      try {
+        const savedIssue = await newIssue.save();
+        res.status(200).json(savedIssue);
+      } catch (err) {
+        res.status(400).json({ message: err.message });
+      }      
     })
     
     .put(function (req, res){
