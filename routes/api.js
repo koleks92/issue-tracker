@@ -18,8 +18,11 @@ module.exports = function (app) {
       const project = req.params.project;
       const { issue_title, issue_text, created_by, assigned_to, status_text } = req.body;
 
+      if (!issue_text || !issue_title || !created_by) {
+        return res.status(400).json({ error: 'required field(s) missing' })
+      }
+
       const newIssue = new Issue({
-        project,
         issue_title,
         issue_text,
         created_by,
@@ -30,7 +33,8 @@ module.exports = function (app) {
 
       try {
         const savedIssue = await newIssue.save();
-        res.status(200).json(savedIssue);
+        delete savedIssue.__v;
+        res.status(201).json(savedIssue);
       } catch (err) {
         res.status(400).json({ message: err.message });
       }      
