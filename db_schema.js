@@ -12,7 +12,6 @@ const IssueSchema = new Schema({
     status_text: { type: String }
   });
 
-const Issue = mongoose.model('Issue', IssueSchema);
 
-module.exports = Issue;
+module.exports = IssueSchema;
 
