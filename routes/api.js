@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 
 
 
+
 module.exports = function (app) {
 
   app.route('/api/issues/:project')
@@ -18,10 +19,8 @@ module.exports = function (app) {
       const Issue = mongoose.model('Issue', IssueSchema, project);
 
       try {
-        // Initialize an empty query object
         const query = {};
 
-        // Check each query parameter and add to the query object if provided
         if (issue_title) query.issue_title = issue_title;
         if (issue_text) query.issue_text = issue_text;
         if (created_by) query.created_by = created_by;
@@ -31,49 +30,133 @@ module.exports = function (app) {
         if (_id) query._id = _id;
         if (created_on) query.created_on = created_on;
         if (updated_on) query.updated_on = updated_on;
+
         const issues = await Issue.find(query);
-        res.status(200).json(issues)
+        return res.json(issues)
       } catch (err) {
-        res.status(400).json({ message: err.message });
+        return res.json({ message: err.message });
       }
 
     })
     
-    .post(async function(req, res){
+    .post(async function (req, res) {
       const project = req.params.project;
 
-      const Issue = mongoose.model('Issue', IssueSchema, project);
-
+      
       const { issue_title, issue_text, created_by, assigned_to, status_text } = req.body;
+      
+      if (!issue_title || !issue_text || !created_by) {
+        return res.json({ error: 'required field(s) missing' });
+      }
 
-      if (issue_title == "" || issue_text == "" || created_by == "") {
-        res.status(400).json({ error: 'required field(s) missing' })
-      } else {
-        const newIssue = new Issue({
-          issue_title,
-          issue_text,
-          created_by,
-          assigned_to,
-          status_text
-        });
-  
-        try {
-          const savedIssue = await newIssue.save();
-          console.log(savedIssue);
-          res.status(200).json(savedIssue.toObject());
-        } catch (err) {
-          res.status(400).json({ message: err.message });
-        }      
-      }     
+      const Issue = mongoose.model('Issue', IssueSchema, project);
+      
+      const created_on = new Date();
+      const updated_on = new Date();
+      const open = true;
+
+      const newIssue = new Issue({
+        issue_title,
+        issue_text,
+        created_by,
+        assigned_to,
+        status_text,
+        created_on,
+        updated_on,
+        open
+      });
+
+      try {
+        const savedIssue = await newIssue.save();
+
+        if (!savedIssue) {
+          throw err
+        }
+
+        return res.json(savedIssue);
+      } catch (err) {
+        return res.json({ message: err.message });
+      }
     })
     
-    .put(function (req, res){
+    
+    .put(async function(req, res){
       let project = req.params.project;
+
+      const _id = req.body._id;
+      
+      if(_id === '' || !_id){
+        return res.json({error: 'missing _id'});
+      }
+
+      const Issue = mongoose.model('Issue', IssueSchema, project);
+      
+      const { assigned_to, status_text, open, issue_title, issue_text } = req.body;
+
+      if (!assigned_to && !status_text && !open && !issue_title && !issue_text) {
+        return res.json( { error: 'no update field(s) sent', '_id': _id } )
+      }
+
+      try {
+        const updatedFields = {}
+
+        if (assigned_to) updatedFields.assigned_to = assigned_to;
+        if (status_text) updatedFields.status_text = status_text;
+        if (issue_title) updatedFields.issue_title = issue_title;
+        if (issue_text) updatedFields.issue_text = issue_text;
+
+        if (open) {
+          if (open == "true") {
+            updatedFields.open = true;
+          } else {
+            updatedFields.open = false
+          } 
+        }
+
+        updatedFields.updated_on = new Date();
+
+
+        const updatedIssue = await Issue.findByIdAndUpdate(_id, updatedFields, { new: true });
+
+        if (!updatedIssue) {
+          throw err
+        }
+    
+        return res.json({ result: 'successfully updated', '_id': _id });
+      } catch (err) {
+          res.json({
+            error: 'could not update', '_id': _id
+          }) 
+      }
       
     })
     
-    .delete(function (req, res){
+    .delete(async function (req, res){
       let project = req.params.project;
+
+      const Issue = mongoose.model('Issue', IssueSchema, project);
+
+      const _id = req.body._id;
+
+      if (!_id) {
+        return res.json({ error: 'missing _id' })
+      };
+
+      try {
+        const deleted = await Issue.findByIdAndDelete(_id);
+
+        if (!deleted) {
+          throw error;
+        }
+
+        res.json({
+          result: 'successfully deleted', '_id': _id 
+        })
+      } catch (err) {
+        res.json({
+          error: 'could not delete', '_id': _id
+        })
+      }
       
     });
     
