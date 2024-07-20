@@ -14,9 +14,10 @@ module.exports = function (app) {
       const project = req.params.project;
 
       const { issue_title, issue_text, created_by, assigned_to, status_text, open, _id, created_on, updated_on } = req.query;
-
       
       const Issue = mongoose.model('Issue', IssueSchema, project);
+      
+
 
       try {
         const query = {};
@@ -26,12 +27,24 @@ module.exports = function (app) {
         if (created_by) query.created_by = created_by;
         if (assigned_to) query.assigned_to = assigned_to;
         if (status_text) query.status_text = status_text;
-        if (open !== undefined) query.open = open === 'true'; // Convert string to boolean if 'open' is provided
         if (_id) query._id = _id;
         if (created_on) query.created_on = created_on;
         if (updated_on) query.updated_on = updated_on;
+        if (open) {
+          if (open == "true") {
+            updatedFields.open = true;
+          } else {
+            updatedFields.open = false
+          } 
+        }
 
-        const issues = await Issue.find(query);
+        let issues;
+
+        if (!query) {
+          issues = await Issue.find();
+        } else {
+          issues = await Issue.find(query);
+        }
         return res.json(issues)
       } catch (err) {
         return res.json({ message: err.message });
